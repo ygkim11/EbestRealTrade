@@ -94,7 +94,6 @@ class Portfolio(object):
         #Updated by update_timeindex() right after..
         #결국 current_position을 주축으로 계속 Fill과 Close가격에 변화에 따른 Holding의 변화를 모니터링 하고
         #이후 update_timeindex() 함수를 통해 반영하는 구조.
-        print("p2가 연산하는중?")
         latest_datetime = self.bars.get_latest_bar_datetime(self.symbol_list[0])
 
         #Update positions
@@ -206,6 +205,7 @@ class Portfolio(object):
     def update_signal(self, event):
         """
         Acts on a SignalEvent to generate new orders based on the portfolio logic.
+        Portfolio에서 전체 포트폴리오의 잔액, 균형을 보면서 주문을 내야함으로 Port Class에 들어와 있음.
         """
         if event.type == 'SIGNAL':
             order_event = self.generate_naive_order(event)

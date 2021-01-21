@@ -96,8 +96,8 @@ class EbestDataHandler(DataHandler):
         self.latest_symbol_data = {}
         self.continue_backtest = True
 
-        self.shared_code, self.shared_bar = self._set_shared_mem()
-        self.symbol_list = self.shared_code
+        self.shared_stock_code, self.shared_future_code, self.shared_bar = self._set_shared_mem()
+        self.symbol_list = symbol_list
         self.shared_code_dict = {}
         self.bar_col_dict = {}
 
@@ -112,14 +112,16 @@ class EbestDataHandler(DataHandler):
 
 
     def _set_shared_mem(self):
-        exist_shm_code = shared_memory.SharedMemory(name="shm_stock_codes")
-        tmp_code = np.ndarray((4,), dtype=np.int32, buffer=exist_shm_code.buf)
+        exist_shm_stock_code = shared_memory.SharedMemory(name="shm_stock_codes")
+        tmp_stock_code = np.ndarray((2,), dtype=np.int32, buffer=exist_shm_stock_code.buf)
+
+        exist_shm_future_code = shared_memory.SharedMemory(name="shm_future_codes")
+        tmp_future_code = np.ndarray((2,), dtype=np.int32, buffer=exist_shm_future_code.buf)
 
         exist_shm = shared_memory.SharedMemory(name="shm_stocks")
         tmp_bar = np.ndarray((4, 50), dtype=np.int32, buffer=exist_shm.buf)
 
-
-        return tmp_code, tmp_bar
+        return tmp_stock_code, tmp_future_code, tmp_bar
 
     # def _get_new_bar(self, symbol):
     #     """

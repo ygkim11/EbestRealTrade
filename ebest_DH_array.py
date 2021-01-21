@@ -360,12 +360,21 @@ class Main:
         MyObjects.shm_arr_stocks = np.ndarray(MyObjects.fixed_arr.shape, dtype=MyObjects.fixed_arr.dtype,
                                               buffer=MyObjects.shm_stocks_buf.buf)
 
+        # Stock_code Shared Mem
         fixed_code_arr = np.zeros(num_codes, dtype=object)
         shm_stock_codes_buf = shared_memory.SharedMemory(create=True, size=fixed_code_arr.nbytes,
                                                                    name='shm_stock_codes')
         shm_arr_stock_codes = np.ndarray(fixed_code_arr.shape, dtype=fixed_code_arr.dtype,
                                                    buffer=shm_stock_codes_buf.buf)
-        shm_arr_stock_codes[:] = MyObjects.whole_universe_code_list[:]
+        shm_arr_stock_codes[:] = MyObjects.stock_futures_basecode_list[:]
+
+        # Future_code Shared Mem
+        fixed_fu_code_arr = np.zeros(num_codes, dtype=object)
+        shm_future_codes_buf = shared_memory.SharedMemory(create=True, size=fixed_fu_code_arr.nbytes,
+                                                         name='shm_future_codes')
+        shm_arr_future_codes = np.ndarray(fixed_code_arr.shape, dtype=fixed_code_arr.dtype,
+                                         buffer=shm_future_codes_buf.buf)
+        shm_arr_future_codes[:] = MyObjects.stock_futures_code_list[:]
 
         # existing_shm_stock_codes = shared_memory.SharedMemory(name="shm_stock_codes")
         # existing_shm_stock_codes.shape

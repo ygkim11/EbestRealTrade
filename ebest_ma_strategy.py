@@ -6,9 +6,9 @@ import statsmodels.api as sm
 
 from ebest_strategy import Strategy
 from ebest_event import SignalEvent
-from ebest_backtest import Backtest
-from ebest_data import HistoricMinDataHandler
-from ebest_execution import SimulatedExecutionHandler
+from ebest_real_trade import RealTrade
+from ebest_data import EbestDataHandler
+from ebest_execution import EbestExecutionHandler
 from ebest_portfolio import Portfolio
 
 class MovingAverageCrossStrategy(Strategy):
@@ -50,7 +50,6 @@ class MovingAverageCrossStrategy(Strategy):
         :return:
         """
         if event.type == 'MARKET':
-            print("p1이 연산하는중?")
             for s in self.symbol_list:
                 bars = self.bars.get_latest_n_bars_value(s, 'close', N=self.long_window)
                 bar_date = self.bars.get_latest_bar_datetime(s)
@@ -81,20 +80,21 @@ class MovingAverageCrossStrategy(Strategy):
 
 if __name__ == "__main__":
     csv_dir = 'G:/공유 드라이브/Project_TBD/Stock_Data/minute_8_25_10_19/'
-    # symbol_list = ["005930"]
-    symbol_list = pd.read_csv("./code_list/minute_sucess_codelist.csv").values.reshape(-1)[:100]
+    symbol_list = ["005930", "096530"] # , "111R2000", "1CLR2000"]
+    # stock_futures_code_list = ["111R2000", "1CLR2000"]
+    # stock_futures_basecode_list = ["005930", "096530"]
     initial_cap = 1000000.0
     heartbeat = 1.0 # 1초 단위로 데이터 받고 처리하기위해
-    start_date = datetime.datetime(2019, 11, 1, 9, 0, 0)
+    # start_date = datetime.datetime(2019, 11, 1, 9, 0, 0)
+    start_date = datetime.datetime.now()
 
-    start = time.time()
-    backtest = Backtest(
+    realtrade = RealTrade(
         csv_dir, symbol_list, initial_cap, heartbeat, start_date,
-        HistoricMinDataHandler, SimulatedExecutionHandler, Portfolio,
+        EbestDataHandler, EbestExecutionHandler, Portfolio,
         MovingAverageCrossStrategy
     )
-    backtest.simulate_trading()
-    end = time.time()
+    realtrade.start_trading()
+
     print(end-start)
 
 

@@ -5,7 +5,7 @@ import time
 import matplotlib.pyplot as plt
 from multiprocessing import Process, Manager, Queue, JoinableQueue
 
-class Backtest(object):
+class RealTrade(object):
     """
     Encapsulates the setting and components for carrying out
     an event-driven backtest
@@ -61,7 +61,7 @@ class Backtest(object):
          self.execution_handler = self.execution_handler_cls(self.events)
 
 
-    def _run_backtest(self):
+    def _run_real_trade(self):
         """
         Executes backtest
         :return:
@@ -125,10 +125,10 @@ class Backtest(object):
         self.portfolio.equity_curve['equity_curve'].plot()
         plt.show()
 
-    def simulate_trading(self):
+    def start_trading(self):
         """
         Simulates the backtest and outputs portfolio performance.
         :return:
         """
-        self._run_backtest()
+        self._run_real_trade()
         self._output_performance()
