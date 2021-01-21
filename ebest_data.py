@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from ebest_event import MarketEvent
 from collections import deque
+from multiprocessing import shared_memory
+import time
 
 class DataHandler(object):
     """
@@ -70,6 +72,156 @@ class DataHandler(object):
         (datetime, open, high, low, close, volume, open interest)
         """
         raise NotImplementedError("Should implement update_bars()")
+
+class EbestDataHandler(DataHandler):
+    """
+    HistoricMinDataHandler is design to read CSV files for each requested symbol from G-Drive
+    and provide the "latest" bar in manner identical to a live trading interface
+    """
+
+    def __init__(self, events, csv_dir, symbol_list):
+        """
+        Initialises the historic minute data handler by requesting the CSV files and a list of symbols.
+        It will be assumed that all files are of the form 'symbol.csv', where symbol is a string in the list.
+        :param events: The event queue
+        :param csv_dir: Absolute directory path to CSV files.
+        :param symbol_list: A list of symbol strings.
+        """
+
+        self.events = events
+        self.csv_dir = csv_dir
+        self.symbol_list = symbol_list
+
+        self.symbol_data = {}
+        self.latest_symbol_data = {}
+        self.continue_backtest = True
+
+        self.shared_code, self.shared_bar = self._set_shared_mem()
+        self.symbol_list = self.shared_code
+        self.shared_code_dict = {}
+        self.bar_col_dict = {}
+
+        for i, code in enumerate(self.shared_code):
+            self.shared_code_dict[code] = i
+
+        self.col_names = ["datetime", "current_price", "open", "high", "low", "volume","cum_volume", "trade_sell_hoga1", "trade_buy_hoga1", "hogatime", "buy_hoga1~10", "sell_hoga1~10", "buy_hoga_stack1~10", "sell_hoga_stack1~10"] \
+                         + ["buy_hoga_%s" % str(i) for i in range(1, 11)] + ["sell_hoga_%s" % str(i) for i in range(1, 11)] + ["buy_hoga_stack%s" % str(i) for i in range(1, 11)] + ["sell_hoga_stack%s" % str(i) for i in range(1, 11)]
+
+        for i, col in enumerate(self.col_names):
+            self.bar_col_dict[col] = i
+
+
+    def _set_shared_mem(self):
+        exist_shm_code = shared_memory.SharedMemory(name="shm_stock_codes")
+        tmp_code = np.ndarray((4,), dtype=np.int32, buffer=exist_shm_code.buf)
+
+        exist_shm = shared_memory.SharedMemory(name="shm_stocks")
+        tmp_bar = np.ndarray((4, 50), dtype=np.int32, buffer=exist_shm.buf)
+
+
+        return tmp_code, tmp_bar
+
+    # def _get_new_bar(self, symbol):
+    #     """
+    #     :return: the latest bar from data feed.
+    #     """
+    #     for bar in self.symbol_data[symbol]:
+    #         yield bar
+    #
+    #     #using yield method to create Generater to make it iterable.
+    #     #Thus we can use next() function in update_bars
+    #     #cf) Generater is iterater and memory efficient. Best for large dataset iterating only once in lifetime
+    #     #https://tech.ssut.me/what-does-the-yield-keyword-do-in-python/
+
+
+    def get_latest_bar(self, symbol):
+        """
+        :return: the last bar from the latest_symbol list.
+        """
+        try:
+            bars_list = list(self.latest_symbol_data[symbol])
+        except KeyError:
+            print("Symbol is not available!!")
+            raise
+        else:
+            return bars_list[-1]
+
+    def get_latest_n_bars(self, symbol, N=1):
+        """
+        :return: latest n bars or n-k if less available
+        """
+        try:
+            bars_list = list(self.latest_symbol_data[symbol])
+        except KeyError:
+            print("Symbol is not available!!")
+            raise
+        else:
+            return bars_list[-N:]
+        #update bar에서 latest_symbol_data에 넣어주는건 bar 하나인데 어떻게 -N개 만큼 가져올수 있는거지?
+
+    def get_latest_bar_datetime(self, symbol):
+        """
+        :return: Python datetime object for the last bar
+        """
+        try:
+            bars_list = list(self.latest_symbol_data[symbol])
+        except KeyError:
+            print("Symbol is not available!!")
+            raise
+        else:
+            return bars_list[-1][0]
+
+    def get_latest_bar_value(self, symbol, val_type):
+        """
+        :param val_type: one of OHLCV, Quotes, Open Interest(OI)
+        :return: returns one of values designated by val_type
+        """
+        try:
+            bars_list = list(self.latest_symbol_data[symbol])
+        except KeyError:
+            print("Symbol is not available!!")
+            raise
+        else:
+            return bars_list[-1][1][self.bar_col_dict[val_type]]
+
+    def get_latest_n_bars_value(self, symbol, val_type, N=1):
+        """
+        :param val_type: one of OHLCV, Quotes, Open Interest(OI)
+        :param N: Number of bars considered
+        :return: returns one of N-bars values designated by val_type
+        """
+        try:
+            bars_list = list(self.get_latest_n_bars(symbol, N))
+        except KeyError:
+            print("Symbol is not available!!")
+            raise
+        else:
+            col_idx = self.bar_col_dict[val_type]
+            return np.array([bar[1][col_idx] for bar in bars_list])
+
+    def update_bars(self):
+        """
+        Pushes the latest bars to the bars_queue for each symbol in a tuple OHLCV format:
+        (datetime, open, high, low, close, volume)
+        """
+        for s in self.symbol_list:
+            try:
+                bar = self.shared_bar[self.shared_code_dict[s]]
+            except NameError:
+                print("Test Force Stop")
+                self.continue_backtest = False
+            else:
+                bar_tuple = (datetime.datetime.now(), bar)
+                self.latest_symbol_data[s].append(bar_tuple)
+
+        self.events.put(MarketEvent())  # put() 함수는 Queue에 Item을 넣는 함수
+
+
+
+
+
+
+
 
 class HistoricMinDataHandler(DataHandler):
     """

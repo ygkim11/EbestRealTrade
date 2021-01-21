@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # symbol_list = ["005930"]
     symbol_list = pd.read_csv("./code_list/minute_sucess_codelist.csv").values.reshape(-1)[:100]
     initial_cap = 1000000.0
-    heartbeat = 0.0
+    heartbeat = 1.0 # 1초 단위로 데이터 받고 처리하기위해
     start_date = datetime.datetime(2019, 11, 1, 9, 0, 0)
 
     start = time.time()

@@ -61,16 +61,12 @@ class Backtest(object):
          self.execution_handler = self.execution_handler_cls(self.events)
 
 
-    def _run_backtest(self):
+    def _run_real_trade(self):
         """
         Executes backtest
         :return:
         """
-        i = 0
         while True:
-            i += 1 # 여기에 Tqdm 넣어주면 좋을듯?
-            if i % 10000 == 1:
-                print(i)
             #Update the market bars
             if self.data_handler.continue_backtest == True:
                 self.data_handler.update_bars(i)
@@ -79,58 +75,7 @@ class Backtest(object):
             #Handles the events
             while True:
                 try:
-                    event = self.events.get(False)
-                except queue.Empty:
-                    break
-                else:
-                    if event is not None:
-                        if event.type == 'MARKET':
-                            print(event)
-                            p1 = Process(target=self.strategy.calc_signals, args=(event,))
-                            p2 = Process(target=self.portfolio.update_timeindex, args=(event,))
-                            p1.start()
-                            p2.start()
-
-                            # self.strategy.calc_signals(event)
-                            # self.portfolio.update_timeindex(event)
-
-                        elif event.type == 'SIGNAL':
-                            print(event)
-                            self.signals += 1
-                            self.portfolio.update_signal(event)
-                        elif event.type == 'ORDER':
-                            print(event)
-                            self.orders += 1
-                            self.execution_handler.execute_order(event)
-                        elif event.type == 'FILL':
-                            print(event)
-                            self.fills += 1
-                            self.portfolio.update_fill(event)
-
-        p1.join()
-        p2.join()
-
-        time.sleep(self.heartbeat) #Live Trading시 실제로 시간을 맞춰주려는 code인가? Backtest에서는 0.0으로 설정해버림.
-
-    def _run_backtest_wo_mul(self):
-        """
-        Executes backtest
-        :return:
-        """
-        i = 0
-        while True:
-            i += 1 # 여기에 Tqdm 넣어주면 좋을듯?
-            if i % 10000 == 1:
-                print(i)
-            #Update the market bars
-            if self.data_handler.continue_backtest == True:
-                self.data_handler.update_bars(i)
-            else:
-                break
-            #Handles the events
-            while True:
-                try:
-                    event = self.events.get(False)
+                    event = self.events.get(False) # queue에 뭐가있으면 다처리하고 while문 밖으로 나감!
                 except queue.Empty:
                     break
                 else:
@@ -139,7 +84,10 @@ class Backtest(object):
                             print(event)
                             self.strategy.calc_signals(event)
                             self.portfolio.update_timeindex(event)
-
+                            # p1 = Process(target=self.strategy.calc_signals, args=(event,))
+                            # p2 = Process(target=self.portfolio.update_timeindex, args=(event,))
+                            # p1.start()
+                            # p2.start()
                         elif event.type == 'SIGNAL':
                             print(event)
                             self.signals += 1
@@ -183,12 +131,4 @@ class Backtest(object):
         :return:
         """
         self._run_backtest()
-        self._output_performance()
-
-    def simulate_trading2(self):
-        """
-        Simulates the backtest and outputs portfolio performance.
-        :return:
-        """
-        self._run_backtest_wo_mul()
         self._output_performance()
